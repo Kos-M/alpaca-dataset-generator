@@ -1,7 +1,8 @@
 import json
 import torch
 import os
-from typing import List, Dict, Any
+import numpy as np
+from typing import List, Dict, Any, Union
 from docx import Document
 import PyPDF2
 import nltk
@@ -9,11 +10,17 @@ from nltk.corpus import stopwords
 from collections import Counter
 from transformers import PreTrainedTokenizer, PreTrainedModel
 from sentence_transformers import SentenceTransformer
-
-nltk.download('stopwords', quiet=True)
+from huggingface_hub import InferenceClient
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Import CONFIG if it's defined in a separate file
 from config import CONFIG
+
+sentence_model = SentenceTransformer(CONFIG['models']['sentence'])
+client = InferenceClient(token=CONFIG['hf_api_token'])
+
+nltk.download('stopwords', quiet=True)
 
 def read_text_file(file_path: str) -> str:
     """Read content from a text file."""
@@ -56,7 +63,7 @@ def read_file(file_path: str) -> str:
     else:
         raise ValueError(f"Unsupported file type: {ext}")
 
-def preprocess_text(text: str, max_chars: int = 2000) -> str:
+def preprocess_text(text: str, max_chars: int = CONFIG['max_chars']) -> str:
     """
     Preprocess the input text by:
     1. Removing extra whitespace while preserving paragraph breaks
@@ -75,31 +82,49 @@ def preprocess_text(text: str, max_chars: int = 2000) -> str:
     
     # Split into paragraphs, clean each paragraph, then join with double newline
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-    return '\n\n'.join([' '.join(p.split()) for p in paragraphs])
+    # Replace any hyphens that split words across lines
+    cleaned_paragraphs = [' '.join(p.split()).replace('-\n', '').replace(' - ', ' ') for p in paragraphs]
+    # Remove non-alphanumeric characters
+    cleaned_paragraphs = [''.join(char for char in p if char.isalnum() or char.isspace()) for p in cleaned_paragraphs]
+    return '\n\n'.join(cleaned_paragraphs)
+
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 def extract_keywords(text: str, n: int = 5) -> List[str]:
-    """Extract the most common keywords from the text."""
+    """Extract the most common keywords from the text using TF-IDF."""
     stop_words = set(stopwords.words('english'))
-    words = [word.lower() for word in text.split() if word.isalnum()]
-    word_freq = Counter(word for word in words if word not in stop_words)
-    return [word for word, _ in word_freq.most_common(n)]
+    vectorizer = TfidfVectorizer(stop_words=list(stop_words))
+    vectorizer.fit([text])
+    feature_names = vectorizer.get_feature_names_out()
+    tfidf_matrix = vectorizer.transform([text])
+    
+    # Get word scores
+    word_scores = [(feature_names[col], tfidf_matrix[0, col]) for col in tfidf_matrix.indices]
+    
+    # Sort by score
+    sorted_words = sorted(word_scores, key=lambda x: x[1], reverse=True)
+    
+    # Return top n keywords
+    return [word for word, score in sorted_words[:n]]
 
 def generate_gpt2_output(
     tokenizer: PreTrainedTokenizer,
     model: PreTrainedModel,
-    prompt: str,
+    prompt: Union[str, List[str]],
     device: torch.device,
-    max_length: int = 50
-) -> str:
-    """Generate output using a GPT-2 model."""
-    # Set padding token if not already set
+    max_length: int = CONFIG['gpt2_output_max_length']
+) -> Union[str, List[str]]:
+    """Generate output using a GPT-2 model, supporting batch inference."""
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    
-    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=512)
-    input_ids = inputs.input_ids.to(device)
-    attention_mask = inputs.attention_mask.to(device)
-    
+
+    is_single_input = isinstance(prompt, str)
+    prompts = [prompt] if is_single_input else prompt
+
+    inputs = tokenizer(prompts, return_tensors="np", padding=True, truncation=True, max_length=512)
+    input_ids = torch.from_numpy(inputs.input_ids).to(device)
+    attention_mask = torch.from_numpy(inputs.attention_mask).to(device)
+
     with torch.no_grad():
         outputs = model.generate(
             input_ids=input_ids,
@@ -113,22 +138,67 @@ def generate_gpt2_output(
             top_p=0.95,
         )
     
-    generated_text = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
-    return generated_text.strip()
+    # Decode outputs. If batched, outputs will be (batch_size * num_return_sequences, sequence_length)
+    # We assume num_return_sequences=1 for simplicity here.
+    generated_texts = []
+    for i in range(len(prompts)):
+        # Find the start of the generated text by looking for the prompt's length
+        # This assumes that the generated output directly follows the input prompt tokens
+        # For batched generation, input_ids.shape[1] might be the max length of the batch inputs
+        # A more robust way would be to track original input lengths or use `skip_special_tokens=True`
+        # and then remove the prompt from the decoded output.
+        decoded_output = tokenizer.decode(outputs[i], skip_special_tokens=True)
+        
+        # Remove the original prompt from the generated text
+        # This is a heuristic and might need refinement based on actual model behavior
+        if decoded_output.startswith(prompts[i]):
+            generated_text = decoded_output[len(prompts[i]):].strip()
+        else:
+            generated_text = decoded_output.strip() # Fallback if prompt removal is tricky
+
+        generated_texts.append(generated_text)
+
+    return generated_texts[0] if is_single_input else generated_texts
 
 def generate_t5_output(
     tokenizer: PreTrainedTokenizer,
     model: PreTrainedModel,
-    prefix: str,
-    input_text: str,
+    prefix: Union[str, List[str]],
+    input_text: Union[str, List[str]],
     device: torch.device,
-    max_length: int = 100
-) -> str:
-    """Generate output using a T5 model."""
-    input_ids = tokenizer(f"{prefix}: {input_text}", return_tensors="pt", max_length=512, truncation=True).input_ids.to(device)
+    max_length: int = CONFIG['t5_output_max_length']
+) -> Union[str, List[str]]:
+    """Generate output using a T5 model, supporting batch inference."""
+    is_single_input = isinstance(input_text, str)
+    
+    if is_single_input:
+        prefixes = [prefix]
+        input_texts = [input_text]
+    else:
+        prefixes = prefix if isinstance(prefix, list) else [prefix] * len(input_text)
+        input_texts = input_text
+
+    # Prepare inputs for tokenizer
+    model_inputs = [f"{p}: {t}" for p, t in zip(prefixes, input_texts)]
+
+    inputs = tokenizer(model_inputs, return_tensors="np", padding=True, truncation=True, max_length=512)
+    input_ids = torch.from_numpy(inputs.input_ids).to(device)
+    attention_mask = torch.from_numpy(inputs.attention_mask).to(device)
+
     with torch.no_grad():
-        outputs = model.generate(input_ids, max_length=max_length, num_return_sequences=1, do_sample=True, top_k=50, top_p=0.95)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+        outputs = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            max_length=max_length,
+            num_return_sequences=1,
+            do_sample=True,
+            top_k=50,
+            top_p=0.95
+        )
+    
+    generated_texts = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+    
+    return generated_texts[0] if is_single_input else generated_texts
 
 def is_valid_output(
     instruction_type: str,
@@ -137,17 +207,26 @@ def is_valid_output(
     sentence_model: SentenceTransformer
 ) -> bool:
     """Validate the generated output based on instruction type and similarity to input."""
-    if len(output.split()) < 3 or len(output) < 10:
+    # Check for minimum length
+    if len(output.strip()) < 10:
         return False
 
-    input_embedding = sentence_model.encode(input_text, convert_to_tensor=True)
-    output_embedding = sentence_model.encode(output, convert_to_tensor=True)
-    similarity = torch.cosine_similarity(input_embedding, output_embedding, dim=0).item()
-
-    if similarity < 0.3:
+    # Check for URLs
+    if "http://" in output or "https://" in output:
         return False
 
-    if instruction_type == "summarize" and (len(output.split()) > 30 or len(output.split()) < 10):
+    if len(output.split()) < CONFIG['min_output_words'] or len(output) < CONFIG['min_output_chars']:
+        return False
+
+    input_embedding = sentence_model.encode(input_text)
+    output_embedding = sentence_model.encode(output)
+
+    similarity = cosine_similarity(np.array(input_embedding).reshape(1, -1), np.array(output_embedding).reshape(1, -1))[0][0]
+
+    if similarity < CONFIG['min_similarity_threshold']:
+        return False
+
+    if instruction_type == "summarize" and (len(output.split()) > CONFIG['max_summarize_words'] or len(output.split()) < CONFIG['min_output_words']):
         return False
     if instruction_type == "keyword" and not (3 <= len(output.split(',')) <= 5):
         return False
@@ -157,6 +236,18 @@ def is_valid_output(
         return False
     if instruction_type == "question" and not output.endswith('?'):
         return False
+    
+    if instruction_type == "concept_explanation":
+        keywords = extract_keywords(input_text)
+        if not any(keyword.lower() in output.lower() for keyword in keywords):
+            return False
+
+    # Check for repeated phrases or sentences
+    sentences = nltk.sent_tokenize(output)
+    if len(sentences) > 1:
+        sentence_counts = Counter(sentences)
+        if any(count > 1 for count in sentence_counts.values()):
+            return False
 
     return True
 
