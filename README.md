@@ -86,6 +86,10 @@ This section provides a brief overview of key functions within the project.
         - (str): The instruction prompt to be given to the model.
         - (str): The format string for the input text.
 
+### `main.py`
+
+- `main()`: The main function that orchestrates the dataset generation process. It loads input data, sets up models, generates the dataset, saves the raw dataset, validates the generated examples, and saves the validated dataset.
+
 ### `data_loader.py`
 
 - `process_file(file_path)`: Processes a single input file (txt, pdf, or docx) and extracts its content.
@@ -162,7 +166,7 @@ python src/main.py --num_examples 1000
 
 ## Customization
 
-- To modify the types of examples generated, edit the `instructions` list in `src/dataset_generator.py` (Note: This is now `instruction_types` in `src/config.py`).
+- To modify the types of examples generated, edit the `instruction_types` list in `src/config.py`.
 - To adjust validation criteria, modify the `is_valid_output` function in `src/utils.py`.
 
 ## Troubleshooting
