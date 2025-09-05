@@ -252,7 +252,16 @@ def is_valid_output(
     return True
 
 def save_to_jsonl(data: List[Dict[str, Any]], output_file: str):
-    """Save data to a JSONL file."""
+    """
+    Saves a list of dictionaries to a JSONL (JSON Lines) file.
+
+    Each dictionary in the input list is written as a separate line
+    in the output file, formatted as a JSON object.
+
+    Args:
+        data (List[Dict[str, Any]]): The list of dictionaries to save.
+        output_file (str): The path to the output JSONL file.
+    """
     with open(output_file, 'w', encoding='utf-8') as f:
         for item in data:
             json.dump(item, f, ensure_ascii=False)
