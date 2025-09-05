@@ -39,6 +39,29 @@ alpaca-dataset-generator/
 └── README.md
 ```
 
+## Code Overview
+
+This section provides a brief overview of key functions within the project.
+
+### `data_loader.py`
+
+- `process_file(file_path)`: Processes a single input file (txt, pdf, or docx) and extracts its content.
+
+### `model_setup.py`
+
+- `setup_models()`: Initializes and configures the language model and tokenizer used for dataset generation.
+
+### `utils.py`
+
+- `save_to_jsonl(data, output_file)`: Saves a list of dictionaries to a JSONL (JSON Lines) file.
+
+### `dataset_generator.py`
+
+- `TextDataset(Dataset)`: A custom PyTorch Dataset class for handling text data.
+  - `__init__(self, texts, instructions)`: Initializes the dataset with a list of texts and instructions.
+  - `__len__(self)`: Returns the total number of texts in the dataset.
+  - `__getitem__(self, idx)`: Retrieves a text and a randomly chosen instruction for a given index.
+
 ## Setup
 
 1. Clone the repository:
