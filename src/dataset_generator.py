@@ -10,15 +10,37 @@ from model_setup import setup_models
 import re
 
 class TextDataset(Dataset):
-    def __init__(self, texts, instructions):
-        # Preprocess texts when loading to ensure they're within token limits
+    def __init__(self, texts: List[str], instructions: List[tuple]):
+        """
+        Initializes the TextDataset with a list of texts and instructions.
+
+        Args:
+            texts (List[str]): A list of raw text documents.
+            instructions (List[tuple]): A list of instruction tuples, each containing
+                                        (instruction_type, instruction, prompt_template).
+        """
         self.texts = [preprocess_text(text) for text in texts]
         self.instructions = instructions
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Returns the total number of texts in the dataset.
+
+        Returns:
+            int: The number of texts.
+        """
         return len(self.texts)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> tuple:
+        """
+        Retrieves a text and a randomly chosen instruction for a given index.
+
+        Args:
+            idx (int): The index of the text to retrieve.
+
+        Returns:
+            tuple: A tuple containing (text, instruction_type, instruction).
+        """
         text = self.texts[idx]
         instruction_type, instruction, prompt_template = random.choice(self.instructions)
         return text, instruction_type, instruction
