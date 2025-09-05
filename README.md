@@ -43,6 +43,49 @@ alpaca-dataset-generator/
 
 This section provides a brief overview of key functions within the project.
 
+### `config.py`
+
+- `CONFIG`: A dictionary containing all the configuration parameters for the dataset generation process.
+    - `input_folder` (str): Path to your input data folder.
+    - `output_file` (str): Path for the raw output file.
+    - `validated_output_file` (str): Path for the validated output file.
+    - `num_examples` (int): Number of examples to generate.
+    - `batch_size` (int): Batch size for processing.
+    - `max_workers` (int): Number of worker threads for data loading.
+    - `device` (torch.device): The device to use for computations (GPU if available, otherwise CPU).
+    - `models` (dict): A dictionary specifying the models to be used.
+        - `gpt2` (str): The GPT-2 model to use (e.g., 'gpt2-large').
+        - `t5` (str): The T5 model to use (e.g., 't5-large').
+        - `sentiment` (str): The sentiment analysis model to use (e.g., 'distilbert-base-uncased-finetuned-sst-2-english').
+        - `sentence` (str): The sentence embedding model to use (e.g., 'all-MiniLM-L6-v2').
+    - `keyword_count` (int): Number of keywords to extract.
+    - `gpt2_max_length` (int): Maximum length for GPT-2 generated sequences.
+    - `no_repeat_ngram_size` (int): Size of n-grams to avoid repeating in generated text.
+    - `t5_prompt_max_length` (int): Maximum length for T5 prompt.
+    - `tokenizer_max_length` (int): Maximum length for tokenizer.
+    - `top_k` (int): The number of highest probability vocabulary tokens to keep for top-k-filtering.
+    - `top_p` (float): The cumulative probability for top-p-filtering.
+    - `sentiment_truncation_length` (int): Length to truncate text for sentiment analysis.
+    - `max_chars` (int): Maximum characters to process from a text.
+    - `gpt2_output_max_length` (int): Maximum length for GPT-2 output.
+    - `t5_output_max_length` (int): Maximum length for T5 output.
+    - `min_word_count` (int): Minimum word count for validation.
+    - `min_output_length` (int): Minimum output length for validation.
+    - `min_similarity_threshold` (float): Minimum similarity threshold for validation.
+    - `min_explanation_word_count` (int): Minimum word count for explanations.
+    - `min_output_words` (int): Minimum number of words in the output.
+    - `min_output_chars` (int): Minimum number of characters in the output.
+    - `max_summarize_words` (int): Maximum number of words for summarization.
+    - `min_learning_path_stepspath_steps` (int): Minimum number of steps in a learning path.
+    - `min_quiz_options` (int): Minimum number of options for a quiz question.
+    - `difficulty_keywords` (list): Keywords to identify difficulty levels.
+    - `use_huggingface_embeddings` (bool): Whether to use Hugging Face embeddings.
+    - `hf_api_token` (str): Hugging Face API token.
+    - `instruction_types` (list): A list of tuples, each defining an instruction type for dataset generation. Each tuple contains:
+        - (str): A unique identifier for the instruction type (e.g., "concept_explanation").
+        - (str): The instruction prompt to be given to the model.
+        - (str): The format string for the input text.
+
 ### `data_loader.py`
 
 - `process_file(file_path)`: Processes a single input file (txt, pdf, or docx) and extracts its content.
@@ -119,7 +162,7 @@ python src/main.py --num_examples 1000
 
 ## Customization
 
-- To modify the types of examples generated, edit the `instructions` list in `src/dataset_generator.py`.
+- To modify the types of examples generated, edit the `instructions` list in `src/dataset_generator.py` (Note: This is now `instruction_types` in `src/config.py`).
 - To adjust validation criteria, modify the `is_valid_output` function in `src/utils.py`.
 
 ## Troubleshooting
