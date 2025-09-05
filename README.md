@@ -90,6 +90,10 @@ This section provides a brief overview of key functions within the project.
 
 - `main()`: The main function that orchestrates the dataset generation process. It loads input data, sets up models, generates the dataset, saves the raw dataset, validates the generated examples, and saves the validated dataset.
 
+### `validation.py`
+
+- `validate_dataset(dataset: List[Dict[str, Any]], sentence_model) -> List[Dict[str, Any]]`: Validates the generated dataset based on predefined criteria. It iterates through each example in the dataset and uses `is_valid_output` from `utils.py` to check its validity.
+
 ### `data_loader.py`
 
 - `process_file(file_path)`: Processes a single input file (txt, pdf, or docx) and extracts its content.
