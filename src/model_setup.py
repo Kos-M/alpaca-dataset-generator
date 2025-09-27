@@ -3,8 +3,9 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer, T5ForConditionalGenerat
 from sentence_transformers import SentenceTransformer
 from config import CONFIG
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from typing import Dict, Any
 
-def setup_models():
+def setup_models() -> Dict[str, Any]:
     models = {}
     # GPT-2
     models["gpt2_tokenizer"] = GPT2Tokenizer.from_pretrained(CONFIG['models']['gpt2'], padding_side='left')

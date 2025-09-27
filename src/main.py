@@ -5,7 +5,7 @@ from validation import validate_dataset
 from utils import save_to_jsonl
 from config import CONFIG
 
-def main():
+def main() -> None:
     print("Loading input data...")
     input_texts = load_input_data(CONFIG['input_folder'])
     if not input_texts:

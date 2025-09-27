@@ -1,5 +1,5 @@
 import random
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import torch
@@ -10,15 +10,15 @@ from model_setup import setup_models
 import re
 
 class TextDataset(Dataset):
-    def __init__(self, texts, instructions):
+    def __init__(self, texts: List[str], instructions: List[Tuple[str, str, str]]):
         # Preprocess texts when loading to ensure they're within token limits
         self.texts = [preprocess_text(text) for text in texts]
         self.instructions = instructions
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.texts)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> Tuple[str, str, str]:
         text = self.texts[idx]
         instruction_type, instruction, prompt_template = random.choice(self.instructions)
         return text, instruction_type, instruction
@@ -105,7 +105,7 @@ def generate_batch(models: Dict, texts: List[str], instruction_types: List[str],
     if sentiment_tasks and models.get("sentiment_pipeline"):
         sentiment_texts = [task["text"] for task in sentiment_tasks]
         # Add truncation to handle long texts
-        truncated_sentiment_texts = [text[:CONFIG['sentiment_truncation_length']] for text in sentiment_texts]
+        truncated_sentiment_texts = [text[:CONFIG['sentiment_truncation_length']]]
         sentiments = models["sentiment_pipeline"](truncated_sentiment_texts)
         
         # Convert sentiment analysis results to numpy arrays

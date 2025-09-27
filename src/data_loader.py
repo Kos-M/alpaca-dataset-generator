@@ -10,11 +10,13 @@ def load_input_data(input_folder: str) -> List[str]:
     total_files = sum(len(files) for _, _, files in os.walk(input_folder))
     print(f"Found {total_files} files to process")
     
-    def process_file(file_path):
+    def process_file(file_path: str) -> List[str]:
         try:
             print(f"Processing file: {file_path}")
             text = read_file(file_path)
-            paragraphs = [preprocess_text(para) for para in text.split('\n\n') if para.strip()]
+            paragraphs = [preprocess_text(para) for para in text.split('
+
+') if para.strip()]
             print(f"Extracted {len(paragraphs)} paragraphs from {file_path}")
             return paragraphs
         except Exception as e:
