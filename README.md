@@ -88,30 +88,30 @@ This section provides a brief overview of key functions within the project.
 
 ### `main.py`
 
-- `main()`: The main function that orchestrates the dataset generation process. It loads input data, sets up models, generates the dataset, saves the raw dataset, validates the generated examples, and saves the validated dataset.
+- `main()`: The main function that orchestrates the entire dataset generation process. It handles the loading of input data, setting up of language models, generation of the dataset, saving of the raw dataset, validation of the generated examples, and saving of the final validated dataset.
 
 ### `validation.py`
 
-- `validate_dataset(dataset: List[Dict[str, Any]], sentence_model) -> List[Dict[str, Any]]`: Validates the generated dataset based on predefined criteria. It iterates through each example in the dataset and uses `is_valid_output` from `utils.py` to check its validity.
+- `validate_dataset(dataset: List[Dict[str, Any]], sentence_model: SentenceTransformer) -> List[Dict[str, Any]]`: Validates the generated dataset based on predefined criteria. It iterates through each example in the dataset and uses `is_valid_output` from `utils.py` to check its validity, returning a list of only the valid examples.
 
 ### `data_loader.py`
 
-- `process_file(file_path)`: Processes a single input file (txt, pdf, or docx) and extracts its content.
+- `process_file(file_path: str) -> List[str]`: Processes a single input file (txt, pdf, or docx), extracts its text content, and preprocesses it into a list of paragraphs. Returns a list of preprocessed text paragraphs.
 
 ### `model_setup.py`
 
-- `setup_models()`: Initializes and configures the language model and tokenizer used for dataset generation.
+- `setup_models() -> Dict[str, Any]`: Initializes and configures various pre-trained language models and their tokenizers (GPT-2, T5, sentiment analysis pipeline, and Sentence Transformer) used for dataset generation. Returns a dictionary containing the initialized models and tokenizers.
 
 ### `utils.py`
 
-- `save_to_jsonl(data, output_file)`: Saves a list of dictionaries to a JSONL (JSON Lines) file.
+- `save_to_jsonl(data: List[Dict[str, Any]], output_file: str)`: Saves a list of dictionaries to a JSONL (JSON Lines) file. Each dictionary is written as a new line in the specified output file.
 
 ### `dataset_generator.py`
 
-- `TextDataset(Dataset)`: A custom PyTorch Dataset class for handling text data.
-  - `__init__(self, texts, instructions)`: Initializes the dataset with a list of texts and instructions.
-  - `__len__(self)`: Returns the total number of texts in the dataset.
-  - `__getitem__(self, idx)`: Retrieves a text and a randomly chosen instruction for a given index.
+- `TextDataset(Dataset)`: A custom PyTorch Dataset class designed to handle text data and pair it with randomly selected instruction types and prompts for generating diverse examples.
+  - `__init__(self, texts: List[str], instructions: List[Tuple[str, str, str]])`: Initializes the dataset with a list of raw text strings and a list of instruction tuples. Preprocesses texts to ensure they are within token limits.
+  - `__len__(self) -> int`: Returns the total number of preprocessed texts in the dataset.
+  - `__getitem__(self, idx: int) -> Tuple[str, str, str]`: Retrieves a preprocessed text and a randomly selected instruction (type, prompt, template) for a given index.
 
 ## Setup
 
