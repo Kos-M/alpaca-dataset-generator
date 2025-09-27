@@ -10,20 +10,61 @@ from model_setup import setup_models
 import re
 
 class TextDataset(Dataset):
-    def __init__(self, texts, instructions):
+    """
+    A custom PyTorch Dataset class for handling text data and pairing it with instructions.
+    """
+    def __init__(self, texts: List[str], instructions: List[tuple]):
+        """
+        Initializes the TextDataset with a list of texts and instruction types.
+
+        Args:
+            texts (List[str]): A list of raw text documents to be used as input for generation.
+            instructions (List[tuple]): A list of instruction tuples, where each tuple contains
+                                       (instruction_type, instruction_prompt, prompt_template).
+        """
         # Preprocess texts when loading to ensure they're within token limits
         self.texts = [preprocess_text(text) for text in texts]
         self.instructions = instructions
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Returns the total number of texts in the dataset.
+
+        Returns:
+            int: The number of texts in the dataset.
+        """
         return len(self.texts)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> tuple:
+        """
+        Retrieves a text and a randomly chosen instruction for a given index.
+
+        Args:
+            idx (int): The index of the text to retrieve.
+
+        Returns:
+            tuple: A tuple containing the text, its instruction type, and the instruction prompt.
+        """
         text = self.texts[idx]
         instruction_type, instruction, prompt_template = random.choice(self.instructions)
         return text, instruction_type, instruction
 
 def generate_dataset(input_texts: List[str], models: Dict) -> List[Dict[str, Any]]:
+    """
+    Generates a dataset of Alpaca-style examples from input texts using various models.
+
+    This function creates a `TextDataset`, then uses a `DataLoader` to process batches of texts.
+    For each batch, it calls `generate_batch` to produce examples based on configured instruction types.
+    The generation continues until `CONFIG['num_examples']` is reached.
+
+    Args:
+        input_texts (List[str]): A list of preprocessed text documents.
+        models (Dict): A dictionary containing initialized language models and tokenizers.
+
+    Returns:
+        List[Dict[str, Any]]: A list of generated examples, each being a dictionary
+                              containing 'instruction', 'input', 'instruction_type', and 'output'.
+    """
     dataset = TextDataset(input_texts, CONFIG['instruction_types'])
     dataloader = DataLoader(dataset, batch_size=CONFIG['batch_size'], shuffle=True, num_workers=CONFIG['max_workers'])
 
@@ -44,6 +85,24 @@ def generate_dataset(input_texts: List[str], models: Dict) -> List[Dict[str, Any
     return examples[:CONFIG['num_examples']]
 
 def generate_batch(models: Dict, texts: List[str], instruction_types: List[str], instructions: List[str]) -> List[Dict[str, Any]]:
+    """
+    Generates a batch of Alpaca-style examples based on provided texts and instructions.
+
+    This function processes a batch of input texts, applying different generation strategies
+    (T5 for summarization/paraphrasing, GPT-2 for questions/explanations, keyword extraction,
+    and sentiment analysis) based on the `instruction_types`. It then validates the generated
+    outputs before returning the batch of examples.
+
+    Args:
+        models (Dict): A dictionary containing initialized language models and tokenizers.
+        texts (List[str]): A list of input texts for the current batch.
+        instruction_types (List[str]): A list of instruction types corresponding to each text.
+        instructions (List[str]): A list of instruction prompts corresponding to each text.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries, where each dictionary represents a generated
+                              and validated example with 'instruction', 'input', 'instruction_type', and 'output'.
+    """
     batch_examples_data = []
     t5_tasks = []
     gpt2_tasks = []
