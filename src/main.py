@@ -6,6 +6,19 @@ from utils import save_to_jsonl
 from config import CONFIG
 
 def main():
+    """
+    Orchestrates the entire dataset generation process.
+
+    This function performs the following steps:
+    1. Loads input data from the directory specified in `CONFIG['input_folder']`.
+    2. Sets up the necessary language models and tokenizers.
+    3. Generates a specified number of Alpaca-style examples.
+    4. Saves the raw generated dataset to `CONFIG['output_file']`.
+    5. Validates the generated examples using criteria defined in `validation.py` and `utils.py`.
+    6. Saves the validated dataset to `CONFIG['validated_output_file']`.
+
+    If no valid input files are found, the process is halted with a message.
+    """
     print("Loading input data...")
     input_texts = load_input_data(CONFIG['input_folder'])
     if not input_texts:
