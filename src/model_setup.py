@@ -5,6 +5,22 @@ from config import CONFIG
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 def setup_models():
+    """
+    Initializes and configures all necessary language models and tokenizers.
+
+    This function loads pre-trained models for GPT-2, T5, sentiment analysis, and sentence embeddings
+    based on the configurations specified in `CONFIG['models']`. It also sets up tokenizers
+    and moves models to the appropriate device (GPU if available, otherwise CPU).
+
+    Returns:
+        dict: A dictionary containing the initialized models and tokenizers:
+              - "gpt2_tokenizer": GPT-2 tokenizer.
+              - "gpt2_model": GPT-2 language model.
+              - "t5_tokenizer": T5 tokenizer.
+              - "t5_model": T5 for conditional generation model.
+              - "sentiment_pipeline": Hugging Face sentiment analysis pipeline.
+              - "sentence_model": Sentence Transformer model for embeddings.
+    """
     models = {}
     # GPT-2
     models["gpt2_tokenizer"] = GPT2Tokenizer.from_pretrained(CONFIG['models']['gpt2'], padding_side='left')
