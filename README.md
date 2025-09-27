@@ -88,7 +88,7 @@ This section provides a brief overview of key functions within the project.
 
 ### `main.py`
 
-- `main()`: The main function that orchestrates the entire dataset generation process. It handles the loading of input data, setting up of language models, generation of the dataset, saving of the raw dataset, validation of the generated examples, and saving of the final validated dataset.
+- `main() -> None`: The main function that orchestrates the entire dataset generation process. It handles the loading of input data, setting up of language models, generation of the dataset, saving of the raw dataset, validation of the generated examples, and saving of the final validated dataset.
 
 ### `validation.py`
 
@@ -189,4 +189,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
- 
