@@ -30,9 +30,7 @@ def load_input_data(input_folder: str) -> List[str]:
         try:
             print(f"Processing file: {file_path}")
             text = read_file(file_path)
-            paragraphs = [preprocess_text(para) for para in text.split('
-
-') if para.strip()]
+            paragraphs = [preprocess_text(para) for para in text.split(os.linesep + os.linesep) if para.strip()]
             print(f"Extracted {len(paragraphs)} paragraphs from {file_path}")
             return paragraphs
         except Exception as e:
