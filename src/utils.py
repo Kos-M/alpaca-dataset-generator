@@ -83,7 +83,7 @@ def preprocess_text(text: str) -> str:
     text = re.sub(r'[^a-zA-Z0-9\s.,!?]', '', text)
     return text[:CONFIG['max_chars']]
 
-def extract_keywords(text: str, n: int = CONFIG['keyword_count']]) -> List[str]:
+def extract_keywords(text: str, n: int = CONFIG['keyword_count']) -> List[str]:
     """
     Extracts the most frequent keywords from a given text.
 
