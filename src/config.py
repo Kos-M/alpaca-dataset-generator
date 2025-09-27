@@ -1,6 +1,29 @@
 import torch
 
 CONFIG = {
+    """
+    A dictionary containing configuration parameters for the Alpaca dataset generator.
+
+    This configuration covers various aspects of the dataset generation process,
+    including input/output paths, model settings, text processing parameters,
+    generation parameters, and validation thresholds.
+
+    Key sections:
+    - `input_folder`, `output_file`, `validated_output_file`: File system paths.
+    - `num_examples`, `batch_size`, `max_workers`: Execution control parameters.
+    - `device`: Specifies the computing device (CPU or CUDA).
+    - `models`: Defines the names/paths of various pre-trained models used.
+    - `keyword_count`, `max_chars`: Text preprocessing parameters.
+    - `gpt2_max_length`, `t5_prompt_max_length`, `tokenizer_max_length`, `top_k`, `top_p`:
+      Parameters for text generation models.
+    - `sentiment_truncation_length`: Parameter for sentiment analysis.
+    - `gpt2_output_max_length`, `t5_output_max_length`: Output length constraints for models.
+    - `min_word_count`, `min_output_length`, `min_similarity_threshold`, etc.:
+      Parameters for validating generated outputs.
+    - `instruction_types`: A list of tuples defining different instruction types
+      for dataset generation, including a unique identifier, a prompt template,
+      and an input format string.
+    """
     'input_folder': 'path/to/input/folder',
     'output_file': 'path/to/output.jsonl',
     'validated_output_file': 'path/to/validated_output.jsonl',
@@ -51,13 +74,27 @@ CONFIG = {
     # Instruction types for dataset generation
     'instruction_types': [
         ("concept_explanation", "Explain the following concept in simple terms, focusing on its key aspects and providing a clear and concise definition:", "Concept: {text}"),
-        ("generate_question", "Generate a thought-provoking question about the following concept:", "Concept: {text}\\n\\nOutput:"),
-        ("provide_example", "Provide a real-world example that illustrates the following concept:", "Concept: {text}\\n\\nExplanation:"),
-        ("keyword", "Extract 3-5 main keywords or key phrases from the following text:", "Text: {text}\\n\\nOutput:"),
-        ("title", "Generate a short, engaging title for the following text:", "Text: {text}\\n\\nOutput:"),
-        ("sentiment", "Analyze the sentiment of the following text. Classify it as positive, negative, or neutral, and briefly explain your reasoning:", "Text: {text}\\n\\nOutput:"),
-        ("question", "Generate a thought-provoking question based on the main idea of the following text:", "Text: {text}\\n\\nOutput:"),
-        ("paraphrase", "Rewrite the following text in your own words, maintaining its core meaning:", "Text: {text}\\n\\nOutput:")
+        ("generate_question", "Generate a thought-provoking question about the following concept:", "Concept: {text}\
+\
+Output:"),
+        ("provide_example", "Provide a real-world example that illustrates the following concept:", "Concept: {text}\
+\
+Explanation:"),
+        ("keyword", "Extract 3-5 main keywords or key phrases from the following text:", "Text: {text}\
+\
+Output:"),
+        ("title", "Generate a short, engaging title for the following text:", "Text: {text}\
+\
+Output:"),
+        ("sentiment", "Analyze the sentiment of the following text. Classify it as positive, negative, or neutral, and briefly explain your reasoning:", "Text: {text}\
+\
+Output:"),
+        ("question", "Generate a thought-provoking question based on the main idea of the following text:", "Text: {text}\
+\
+Output:"),
+        ("paraphrase", "Rewrite the following text in your own words, maintaining its core meaning:", "Text: {text}\
+\
+Output:")
 
     ]
 }

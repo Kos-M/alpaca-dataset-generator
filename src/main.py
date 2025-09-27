@@ -6,6 +6,17 @@ from utils import save_to_jsonl
 from config import CONFIG
 
 def main():
+    """
+    Main function to orchestrate the dataset generation process.
+
+    This function performs the following steps:
+    1. Loads input data from the specified input folder.
+    2. Sets up the necessary language models.
+    3. Generates a dataset based on the input texts and models.
+    4. Saves the raw generated dataset to a JSONL file.
+    5. Validates the generated examples.
+    6. Saves the validated dataset to a separate JSONL file.
+    """
     print("Loading input data...")
     input_texts = load_input_data(CONFIG['input_folder'])
     if not input_texts:

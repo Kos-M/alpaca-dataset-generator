@@ -10,20 +10,68 @@ from model_setup import setup_models
 import re
 
 class TextDataset(Dataset):
+    """
+    A custom PyTorch Dataset for handling text data and instructions.
+
+    This dataset preprocesses input texts and pairs them with randomly selected
+    instruction types and prompts for generating diverse examples.
+    """
     def __init__(self, texts, instructions):
+        """
+        Initializes the TextDataset.
+
+        Args:
+            texts (List[str]): A list of raw text strings to be used as input.
+            instructions (List[Tuple[str, str, str]]): A list of instruction tuples,
+                                                      where each tuple contains
+                                                      (instruction_type, instruction_prompt, prompt_template).
+        """
         # Preprocess texts when loading to ensure they're within token limits
         self.texts = [preprocess_text(text) for text in texts]
         self.instructions = instructions
 
     def __len__(self):
+        """
+        Returns the total number of texts in the dataset.
+
+        Returns:
+            int: The number of texts.
+        """
         return len(self.texts)
 
     def __getitem__(self, idx):
+        """
+        Retrieves a text and a randomly selected instruction for a given index.
+
+        Args:
+            idx (int): The index of the text to retrieve.
+
+        Returns:
+            Tuple[str, str, str]: A tuple containing the preprocessed text,
+                                  the randomly chosen instruction type, and the instruction prompt.
+        """
         text = self.texts[idx]
         instruction_type, instruction, prompt_template = random.choice(self.instructions)
         return text, instruction_type, instruction
 
 def generate_dataset(input_texts: List[str], models: Dict) -> List[Dict[str, Any]]:
+    """
+    Generates a dataset of instruction-following examples.
+
+    This function iterates through the input texts, applies various instruction types
+    (e.g., summarization, question generation, sentiment analysis), and uses
+    language models (GPT-2, T5) to generate corresponding outputs.
+    The generated examples are then collected into a list of dictionaries.
+
+    Args:
+        input_texts (List[str]): A list of preprocessed text paragraphs.
+        models (Dict): A dictionary containing initialized language models and tokenizers.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries, where each dictionary represents
+                              an instruction-following example with keys like "instruction",
+                              "input", "instruction_type", and "output".
+    """
     dataset = TextDataset(input_texts, CONFIG['instruction_types'])
     dataloader = DataLoader(dataset, batch_size=CONFIG['batch_size'], shuffle=True, num_workers=CONFIG['max_workers'])
 
@@ -44,6 +92,25 @@ def generate_dataset(input_texts: List[str], models: Dict) -> List[Dict[str, Any
     return examples[:CONFIG['num_examples']]
 
 def generate_batch(models: Dict, texts: List[str], instruction_types: List[str], instructions: List[str]) -> List[Dict[str, Any]]:
+    """
+    Generates a batch of instruction-following examples using various models.
+
+    This function processes a batch of texts and instructions, routing them to
+    appropriate language models (T5 for summarization/paraphrasing, GPT-2 for
+    other generation tasks, sentiment pipeline for sentiment analysis, and
+    keyword extraction for keyword tasks). It then collects the generated outputs
+    and validates them.
+
+    Args:
+        models (Dict): A dictionary containing initialized language models and tokenizers.
+        texts (List[str]): A list of input text strings for the current batch.
+        instruction_types (List[str]): A list of instruction types corresponding to each text.
+        instructions (List[str]): A list of instruction prompts corresponding to each text.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries, each representing a validated
+                              instruction-following example generated in the batch.
+    """
     batch_examples_data = []
     t5_tasks = []
     gpt2_tasks = []
@@ -105,7 +172,7 @@ def generate_batch(models: Dict, texts: List[str], instruction_types: List[str],
     if sentiment_tasks and models.get("sentiment_pipeline"):
         sentiment_texts = [task["text"] for task in sentiment_tasks]
         # Add truncation to handle long texts
-        truncated_sentiment_texts = [text[:CONFIG['sentiment_truncation_length']] for text in sentiment_texts]
+        truncated_sentiment_texts = [text[:CONFIG['sentiment_truncation_length']]]
         sentiments = models["sentiment_pipeline"](truncated_sentiment_texts)
         
         # Convert sentiment analysis results to numpy arrays

@@ -23,7 +23,16 @@ client = InferenceClient(token=CONFIG['hf_api_token'])
 nltk.download('stopwords', quiet=True)
 
 def read_text_file(file_path: str) -> str:
-    """Read content from a text file."""
+    """
+    Reads the entire content of a plain text file.
+
+    Args:
+        file_path (str): The path to the text file.
+
+    Returns:
+        str: The content of the file as a single string. Returns an empty string
+             if an IOError occurs during reading.
+    """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             return file.read()
@@ -32,18 +41,43 @@ def read_text_file(file_path: str) -> str:
         return ""
 
 def read_pdf_file(file_path: str) -> str:
-    """Read content from a PDF file."""
+    """
+    Reads the text content from a PDF file.
+
+    Each page's extracted text is joined by a double newline to help preserve
+    paragraph separation.
+
+    Args:
+        file_path (str): The path to the PDF file.
+
+    Returns:
+        str: The extracted text content from the PDF. Returns an empty string
+             if an error occurs during reading.
+    """
     try:
         with open(file_path, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
             # Join pages with double newline to preserve paragraph breaks
-            return '\n\n'.join([page.extract_text().strip() for page in reader.pages])
+            return '
+
+'.join([page.extract_text().strip() for page in reader.pages])
     except Exception as e:
         print(f"Error reading PDF file {file_path}: {e}")
         return ""
 
 def read_docx_file(file_path: str) -> str:
-    """Read content from a DOCX file."""
+    """
+    Reads the text content from a DOCX file.
+
+    Paragraphs are joined by a single space.
+
+    Args:
+        file_path (str): The path to the DOCX file.
+
+    Returns:
+        str: The extracted text content from the DOCX. Returns an empty string
+             if an error occurs during reading.
+    """
     try:
         doc = Document(file_path)
         return ' '.join([paragraph.text for paragraph in doc.paragraphs])
@@ -52,7 +86,22 @@ def read_docx_file(file_path: str) -> str:
         return ""
 
 def read_file(file_path: str) -> str:
-    """Read content from a file based on its extension."""
+    """
+    Reads content from a file based on its extension.
+
+    This function acts as a dispatcher, calling the appropriate file reading
+    utility (`read_text_file`, `read_pdf_file`, `read_docx_file`) based on
+    the file's extension.
+
+    Args:
+        file_path (str): The path to the file.
+
+    Returns:
+        str: The extracted text content from the file.
+
+    Raises:
+        ValueError: If the file type is not supported (.txt, .pdf, .docx).
+    """
     _, ext = os.path.splitext(file_path.lower())
     if ext == '.txt':
         return read_text_file(file_path)
@@ -65,33 +114,55 @@ def read_file(file_path: str) -> str:
 
 def preprocess_text(text: str, max_chars: int = CONFIG['max_chars']) -> str:
     """
-    Preprocess the input text by:
-    1. Removing extra whitespace while preserving paragraph breaks
-    2. Truncating to prevent exceeding model token limits
-    
+    Preprocesses the input text by cleaning and truncating it.
+
+    This function performs the following steps:
+    1. Truncates the text to a maximum character length to prevent exceeding model token limits.
+    2. Splits the text into paragraphs, cleans each paragraph by removing extra whitespace,
+       replacing hyphenated line breaks, and removing non-alphanumeric characters.
+    3. Joins the cleaned paragraphs back with double newlines.
+
     Args:
-        text: The input text to preprocess
-        max_chars: Maximum number of characters to keep (approximate token limit)
-    
+        text (str): The input text to preprocess.
+        max_chars (int): The maximum number of characters to keep (approximate token limit).
+                         Defaults to `CONFIG['max_chars']`.
+
     Returns:
-        Preprocessed and potentially truncated text
+        str: The preprocessed and potentially truncated text.
     """
     # Truncate the text if it's too long
     if len(text) > max_chars:
         text = text[:max_chars]
     
     # Split into paragraphs, clean each paragraph, then join with double newline
-    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+    paragraphs = [p.strip() for p in text.split('
+
+') if p.strip()]
     # Replace any hyphens that split words across lines
-    cleaned_paragraphs = [' '.join(p.split()).replace('-\n', '').replace(' - ', ' ') for p in paragraphs]
+    cleaned_paragraphs = [' '.join(p.split()).replace('-
+', '').replace(' - ', ' ') for p in paragraphs]
     # Remove non-alphanumeric characters
     cleaned_paragraphs = [''.join(char for char in p if char.isalnum() or char.isspace()) for p in cleaned_paragraphs]
-    return '\n\n'.join(cleaned_paragraphs)
+    return '
+
+'.join(cleaned_paragraphs)
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 def extract_keywords(text: str, n: int = 5) -> List[str]:
-    """Extract the most common keywords from the text using TF-IDF."""
+    """
+    Extracts the most common keywords from the text using TF-IDF.
+
+    This function tokenizes the text, removes stopwords, calculates TF-IDF scores
+    for each word, and returns the top `n` words with the highest scores as keywords.
+
+    Args:
+        text (str): The input text from which to extract keywords.
+        n (int): The number of keywords to extract. Defaults to 5.
+
+    Returns:
+        List[str]: A list of extracted keywords.
+    """
     stop_words = set(stopwords.words('english'))
     vectorizer = TfidfVectorizer(stop_words=list(stop_words))
     vectorizer.fit([text])
@@ -114,7 +185,27 @@ def generate_gpt2_output(
     device: torch.device,
     max_length: int = CONFIG['gpt2_output_max_length']
 ) -> Union[str, List[str]]:
-    """Generate output using a GPT-2 model, supporting batch inference."""
+    """
+    Generates text output using a GPT-2 model.
+
+    This function supports both single and batch inference. It tokenizes the input
+    prompt(s), generates text using the GPT-2 model, and then decodes the generated
+    tokens back into human-readable text. It attempts to remove the original prompt
+    from the generated output.
+
+    Args:
+        tokenizer (PreTrainedTokenizer): The GPT-2 tokenizer.
+        model (PreTrainedModel): The GPT-2 language model.
+        prompt (Union[str, List[str]]): The input prompt(s) for text generation.
+                                        Can be a single string or a list of strings.
+        device (torch.device): The device (e.g., 'cuda' or 'cpu') to run the model on.
+        max_length (int): The maximum length of the generated output sequence (excluding prompt).
+                          Defaults to `CONFIG['gpt2_output_max_length']`.
+
+    Returns:
+        Union[str, List[str]]: The generated text output(s). Returns a single string
+                               if a single prompt was provided, otherwise a list of strings.
+    """
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -168,7 +259,28 @@ def generate_t5_output(
     device: torch.device,
     max_length: int = CONFIG['t5_output_max_length']
 ) -> Union[str, List[str]]:
-    """Generate output using a T5 model, supporting batch inference."""
+    """
+    Generates text output using a T5 model for conditional generation tasks.
+
+    This function supports both single and batch inference. It constructs model inputs
+    by combining a prefix (e.g., "summarize:") with the input text, tokenizes them,
+    generates text using the T5 model, and then decodes the generated tokens.
+
+    Args:
+        tokenizer (PreTrainedTokenizer): The T5 tokenizer.
+        model (PreTrainedModel): The T5 conditional generation model.
+        prefix (Union[str, List[str]]): The prefix(es) to prepend to the input text.
+                                        Can be a single string or a list of strings.
+        input_text (Union[str, List[str]]): The input text(s) for generation.
+                                            Can be a single string or a list of strings.
+        device (torch.device): The device (e.g., 'cuda' or 'cpu') to run the model on.
+        max_length (int): The maximum length of the generated output sequence.
+                          Defaults to `CONFIG['t5_output_max_length']`.
+
+    Returns:
+        Union[str, List[str]]: The generated text output(s). Returns a single string
+                               if a single input was provided, otherwise a list of strings.
+    """
     is_single_input = isinstance(input_text, str)
     
     if is_single_input:
@@ -206,7 +318,27 @@ def is_valid_output(
     input_text: str,
     sentence_model: SentenceTransformer
 ) -> bool:
-    """Validate the generated output based on instruction type and similarity to input."""
+    """
+    Validates a generated output based on its instruction type and content.
+
+    This function applies various validation rules:
+    - Checks for minimum length (characters and words).
+    - Checks for the presence of URLs.
+    - Calculates cosine similarity between the output and input to ensure relevance.
+    - Applies specific validation rules based on the `instruction_type` (e.g., summarization
+      length, keyword count, title length, sentiment keywords, question mark presence,
+      concept explanation keyword presence).
+    - Checks for repeated phrases or sentences within the output.
+
+    Args:
+        instruction_type (str): The type of instruction that generated the output.
+        output (str): The generated text output.
+        input_text (str): The original input text used for generation.
+        sentence_model (SentenceTransformer): The sentence embedding model for similarity calculations.
+
+    Returns:
+        bool: True if the output is considered valid, False otherwise.
+    """
     # Check for minimum length
     if len(output.strip()) < 10:
         return False
@@ -252,8 +384,18 @@ def is_valid_output(
     return True
 
 def save_to_jsonl(data: List[Dict[str, Any]], output_file: str):
-    """Save data to a JSONL file."""
+    """
+    Saves a list of dictionaries to a JSONL (JSON Lines) file.
+
+    Each dictionary in the list is serialized to a JSON string and written
+    as a new line in the specified output file.
+
+    Args:
+        data (List[Dict[str, Any]]): A list of dictionaries to be saved.
+        output_file (str): The path to the output JSONL file.
+    """
     with open(output_file, 'w', encoding='utf-8') as f:
         for item in data:
             json.dump(item, f, ensure_ascii=False)
-            f.write('\n')
+            f.write('
+')
