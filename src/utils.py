@@ -7,6 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from config import CONFIG
 import docx
 import PyPDF2
+import os
 
 # Ensure NLTK data is downloaded
 try:
@@ -30,8 +31,7 @@ def save_to_jsonl(data: List[Dict[str, Any]], output_file: str):
     with open(output_file, 'w', encoding='utf-8') as f:
         for entry in data:
             json.dump(entry, f, ensure_ascii=False)
-            f.write('
-')
+            f.write(os.linesep)
 
 def read_file(file_path: str) -> str:
     """
@@ -58,8 +58,7 @@ def read_file(file_path: str) -> str:
         return text
     elif file_path.endswith('.docx'):
         doc = docx.Document(file_path)
-        return "
-".join([paragraph.text for paragraph in doc.paragraphs])
+        return os.linesep.join([paragraph.text for paragraph in doc.paragraphs])
     else:
         raise ValueError("Unsupported file format")
 
